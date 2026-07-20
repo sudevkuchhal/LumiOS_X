@@ -114,8 +114,10 @@ GET  /update               -> standalone OTA upload page
 POST /update               -> firmware upload (multipart, field "firmware")
 ```
 
-## License / Author
+## License
 
-Built by Sudev as a personal IoT/embedded systems project. No license
-file included — treat as private/personal project code unless the
-author states otherwise.
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Author
+
+Developed by Sudev Kuchhal as an embedded systems and IoT portfolio project built around the ESP32 platform.
