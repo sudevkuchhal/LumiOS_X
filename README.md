@@ -1,4 +1,5 @@
 # LumiOS X — v1.0 Stable
+
 ![ESP32](https://img.shields.io/badge/ESP32-IoT-blue?style=for-the-badge&logo=espressif)
 ![Arduino](https://img.shields.io/badge/Arduino-Framework-00979D?style=for-the-badge&logo=arduino)
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-IDE-F5822A?style=for-the-badge&logo=platformio)
