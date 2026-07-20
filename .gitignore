@@ -1,0 +1,39 @@
+# ==========================================================
+# LumiOS X - .gitignore
+#
+# Bug fix (v1.0 QA pass): include/wifi_config.example.h's own header
+# comment says "wifi_config.h is git-ignored, so your real
+# credentials never get committed" -- but no .gitignore file existed
+# anywhere in the project, so that promise wasn't actually true.
+# include/wifi_config.h in this archive contains real-looking WiFi
+# SSID/password pairs in plaintext; if this project is ever put under
+# git version control (or the archive is shared/published as-is),
+# those credentials will be committed/shared right along with it.
+#
+# Added here so the documented behavior actually happens going
+# forward. This does NOT retroactively scrub wifi_config.h from any
+# git history that may already exist outside this archive -- if this
+# project has already been committed anywhere, treat those
+# credentials as exposed and rotate the WiFi password.
+# ==========================================================
+
+include/wifi_config.h
+
+# PlatformIO / build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Editor/OS cruft
+.DS_Store
+*.swp
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+
+# Build folders
+build/
+Debug/
+Release/

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LumiOS X — Remote</title>
+<script src="https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14; --card:#121821; --line:#1f2937;
+    --text:#e5eef7; --dim:#7c8b9c; --accent:#3fd0c9;
+    --warn:#f5a623; --danger:#ff5c5c; --ok:#3fd0c9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:20px; max-width:480px; margin:0 auto;
+  }
+  h1{font-size:20px; margin:0 0 4px;}
+  .sub{color:var(--dim); font-size:13px; margin-bottom:18px;}
+  .status{
+    display:flex; align-items:center; gap:8px; font-size:13px;
+    padding:10px 14px; border-radius:10px; background:var(--card);
+    border:1px solid var(--line); margin-bottom:16px;
+  }
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--danger); flex-shrink:0;}
+  .dot.on{background:var(--ok); box-shadow:0 0 8px var(--ok);}
+  .dot.stale{background:var(--warn); box-shadow:0 0 8px var(--warn);}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px;
+  }
+  .card .label{color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+  .card .value{font-size:24px; font-weight:600; margin-top:4px;}
+  .card .value.warn{color:var(--warn);}
+  .card .value.danger{color:var(--danger);}
+  .leds{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:12px;}
+  .led-btn{
+    position:relative;
+    background:var(--card); border:1px solid var(--line); color:var(--text);
+    border-radius:12px; padding:14px 4px; text-align:center; font-size:12px;
+    cursor:pointer; user-select:none;
+  }
+  .led-btn.on{background:rgba(63,208,201,.15); border-color:var(--accent); color:var(--accent);}
+  .led-btn.pending{opacity:.5;}
+  .row{display:flex; gap:10px; margin-bottom:16px;}
+  .row button{
+    flex:1; padding:12px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card); color:var(--text); font-size:14px; cursor:pointer;
+  }
+  .notif{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; font-size:13px; color:var(--dim); min-height:18px;
+  }
+  .cfg{margin-top:18px; font-size:11px; color:var(--dim); line-height:1.5;}
+  .cfg b{color:var(--text);}
+
+  /* Login gate */
+  .lock-screen{
+    position:fixed; inset:0; background:var(--bg); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .lock-box{
+    width:100%; max-width:340px; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:24px;
+  }
+  .lock-box h2{margin:0 0 4px; font-size:18px;}
+  .lock-box p{margin:0 0 18px; font-size:13px; color:var(--dim);}
+  .lock-box input{
+    width:100%; padding:12px 14px; margin-bottom:10px; border-radius:10px;
+    border:1px solid var(--line); background:#0e1420; color:var(--text); font-size:14px;
+  }
+  .lock-box button{
+    width:100%; padding:12px; border-radius:10px; border:none;
+    background:var(--accent); color:#04211f; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .lock-err{color:var(--danger); font-size:12px; min-height:16px; margin-top:8px;}
+  .app-hidden{display:none;}
+</style>
+</head>
+<body>
+
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-box">
+      <h2>LumiOS X — Remote</h2>
+      <p>Enter your device username and password to view live data.</p>
+      <input type="text" id="loginUser" placeholder="Username" autocomplete="off">
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
+      <button id="loginBtn">Unlock</button>
+      <div class="lock-err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <div id="app" class="app-hidden">
+
+  <h1>LumiOS X — Remote</h1>
+  <div class="sub">Live data over the internet, no local WiFi needed</div>
+
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Connecting to broker…</span>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Temperature</div><div class="value" id="temp">--</div></div>
+    <div class="card"><div class="label">Humidity</div><div class="value" id="hum">--</div></div>
+    <div class="card"><div class="label">Distance</div><div class="value" id="dist">--</div></div>
+    <div class="card"><div class="label">Smoke / Gas</div><div class="value" id="smoke">--</div></div>
+  </div>
+
+  <div class="leds" id="leds">
+    <div class="led-btn" data-led="1">LED 1</div>
+    <div class="led-btn" data-led="2">LED 2</div>
+    <div class="led-btn" data-led="3">LED 3</div>
+    <div class="led-btn" data-led="4">LED 4</div>
+    <div class="led-btn" data-led="5">LED 5</div>
+  </div>
+
+  <div class="row">
+    <button id="allOn">All On</button>
+    <button id="allOff">All Off</button>
+  </div>
+
+  <div class="notif" id="notif">Waiting for first status update…</div>
+
+  <div class="cfg">
+    Device ID: <span id="devIdShown"></span> · Broker: broker.hivemq.com<br>
+    This page must show the SAME Device ID as <code>IOT_DEVICE_ID</code> in your firmware's config.h.<br><br>
+    <b>Important:</b> this page talks directly to the MQTT broker over the
+    internet — it never contacts the ESP32's local IP. That means it must be
+    <b>opened from somewhere other than the ESP32's own web server</b> to work
+    over mobile data: save this file to your phone and open it locally, or
+    host it on any static web host (GitHub Pages, Netlify, etc). Opening it
+    via <code>http://&lt;esp32-local-ip&gt;/remote_dashboard.html</code> only
+    works while you're on the same WiFi as the device.
+  </div>
+
+  </div><!-- #app -->
+
+<script>
+  // ⚠️ MUST exactly match IOT_DEVICE_ID in include/config.h
+  const DEVICE_ID = "lumiosx_sudev_9f21";
+
+  // ⚠️ Change these before sharing this page with anyone. This is a
+  // client-side gate only (fine for keeping casual/curious people out
+  // of your dashboard) — it does NOT encrypt the MQTT traffic itself.
+  // For real security, move to a private broker with server-side
+  // username/password (see CHANGELOG "Stage I" for the upgrade path).
+  const REMOTE_USER = "sudev";
+  const REMOTE_PASS = "sudev123";
+
+  const TOPIC_STATUS    = `lumiosx/${DEVICE_ID}/status`;
+  const TOPIC_CMD       = `lumiosx/${DEVICE_ID}/cmd`;
+  const TOPIC_AVAIL     = `lumiosx/${DEVICE_ID}/avail`;
+  const TOPIC_HEARTBEAT = `lumiosx/${DEVICE_ID}/heartbeat`;
+  const TOPIC_ACK       = `lumiosx/${DEVICE_ID}/ack`;
+
+  // If we haven't heard a heartbeat OR a status update in this long,
+  // treat the device as offline even if our own broker link is fine.
+  const OFFLINE_TIMEOUT_MS = 12000;
+  // How long to wait for a command ack before warning the user it may
+  // not have landed.
+  const ACK_TIMEOUT_MS = 4000;
+
+  document.getElementById('devIdShown').textContent = DEVICE_ID;
+
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+  const ledState = {1:false,2:false,3:false,4:false,5:false};
+  let client = null;
+  let brokerConnected = false;
+  let deviceLastSeen = 0;          // ms epoch of last status/heartbeat
+  let offlineWatchdog = null;
+  const pendingAcks = new Map();   // id -> {cmd, timeoutHandle, btn}
+
+  // ---------- Logging ----------
+  // Every log line is timestamped and tagged so this is actually
+  // useful for diagnosing "why isn't this updating" from a phone's
+  // remote debugger / desktop console.
+  function log(level, msg) {
+    const ts = new Date().toISOString().split('T')[1].replace('Z', '');
+    const line = `[${ts}] [Dashboard][${level}] ${msg}`;
+    if (level === 'ERROR') console.error(line);
+    else if (level === 'WARN') console.warn(line);
+    else console.log(line);
+  }
+
+  // ---------- Login gate ----------
+  const lockScreen = document.getElementById('lockScreen');
+  const app = document.getElementById('app');
+  const loginErr = document.getElementById('loginErr');
+
+  function tryLogin() {
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+
+    if (u === REMOTE_USER && p === REMOTE_PASS) {
+      lockScreen.style.display = 'none';
+      app.classList.remove('app-hidden');
+      sessionStorage.setItem('lumiosx_authed', '1');
+      connectMqtt();
+    } else {
+      loginErr.textContent = 'Wrong username or password.';
+      log('WARN', 'Login attempt failed');
+    }
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', tryLogin);
+  document.getElementById('loginPass').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryLogin();
+  });
+
+  // Stay unlocked across a page refresh in the same browser tab/session
+  if (sessionStorage.getItem('lumiosx_authed') === '1') {
+    lockScreen.style.display = 'none';
+    app.classList.remove('app-hidden');
+    connectMqtt();
+  }
+
+  // ---------- Connection status UI ----------
+  function setStatusUI(state, text) {
+    dot.classList.remove('on', 'stale');
+    if (state === 'online') dot.classList.add('on');
+    else if (state === 'stale') dot.classList.add('stale');
+    statusText.textContent = text;
+  }
+
+  // Runs continuously; separate from the MQTT connection state because
+  // the browser<->broker link can be perfectly healthy while the ESP32
+  // itself has silently died — that's exactly what /avail + /heartbeat
+  // exist to detect.
+  function startOfflineWatchdog() {
+    if (offlineWatchdog) clearInterval(offlineWatchdog);
+    offlineWatchdog = setInterval(() => {
+      if (!brokerConnected) return; // connection-state handlers already cover this
+      const silentFor = Date.now() - deviceLastSeen;
+      if (deviceLastSeen === 0) return; // never heard from the device yet
+      if (silentFor > OFFLINE_TIMEOUT_MS) {
+        setStatusUI('stale', `Device offline — no signal for ${Math.round(silentFor / 1000)}s`);
+      }
+    }, 2000);
+  }
+
+  // ---------- MQTT (only starts after login) ----------
+  function connectMqtt() {
+    if (client) return; // already connected this session
+
+    // Secure WebSocket (wss) on HiveMQ's public broker — works even
+    // when this page is served over https, and works over mobile data.
+    client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'lumiosx-web-' + Math.random().toString(16).slice(2),
+      reconnectPeriod: 3000,
+      connectTimeout: 10000,
+      keepalive: 30,
+      clean: true
+    });
+
+    client.on('connect', () => {
+      brokerConnected = true;
+      log('INFO', 'Connected to broker');
+      setStatusUI('stale', 'Connected — waiting for device…');
+      client.subscribe(TOPIC_STATUS, { qos: 1 });
+      client.subscribe(TOPIC_AVAIL, { qos: 1 });
+      client.subscribe(TOPIC_HEARTBEAT, { qos: 0 });
+      client.subscribe(TOPIC_ACK, { qos: 1 });
+      startOfflineWatchdog();
+    });
+
+    client.on('reconnect', () => {
+      brokerConnected = false;
+      log('WARN', 'Reconnecting to broker…');
+      setStatusUI('offline', 'Reconnecting…');
+    });
+
+    client.on('close', () => {
+      brokerConnected = false;
+      log('WARN', 'Broker connection closed');
+      setStatusUI('offline', 'Disconnected');
+    });
+
+    client.on('error', (err) => {
+      log('ERROR', 'MQTT client error: ' + (err && err.message ? err.message : err));
+    });
+
+    client.on('offline', () => {
+      brokerConnected = false;
+      log('WARN', 'Client is offline');
+      setStatusUI('offline', 'Offline — no network?');
+    });
+
+    client.on('message', (topic, payload) => {
+      const text = payload.toString();
+
+      if (topic === TOPIC_AVAIL) {
+        if (text === 'online') {
+          log('INFO', 'Device reported online (LWT/avail)');
+        } else {
+          log('WARN', 'Device reported offline (LWT/avail)');
+          setStatusUI('offline', 'Device offline');
+          deviceLastSeen = 0;
+        }
+        return;
+      }
+
+      if (topic === TOPIC_HEARTBEAT) {
+        deviceLastSeen = Date.now();
+        // Only upgrade the status line if we're not mid-render of a
+        // fresher status message; heartbeat's job is liveness, not content.
+        if (statusText.textContent.startsWith('Device offline') ||
+            statusText.textContent.startsWith('Connected —')) {
+          setStatusUI('online', 'Live — device online');
+        }
+        return;
+      }
+
+      if (topic === TOPIC_ACK) {
+        let a;
+        try { a = JSON.parse(text); } catch (e) {
+          log('ERROR', 'Ack payload was not valid JSON: ' + text);
+          return;
+        }
+        const pending = pendingAcks.get(a.id);
+        if (pending) {
+          clearTimeout(pending.timeoutHandle);
+          pendingAcks.delete(a.id);
+          if (pending.btn) pending.btn.classList.remove('pending');
+          log(a.ok ? 'INFO' : 'WARN', `Ack for "${a.cmd}": ${a.ok ? 'executed' : 'rejected/unknown command'}`);
+        }
+        return;
+      }
+
+      if (topic !== TOPIC_STATUS) return;
+
+      let d;
+      try {
+        d = JSON.parse(text);
+      } catch (e) {
+        log('ERROR', 'Status payload was not valid JSON, dropping message: ' + e.message);
+        return;
+      }
+
+      deviceLastSeen = Date.now();
+      setStatusUI('online', `Live — ${d.ip || ''} · RSSI ${d.rssi ?? '--'} dBm`);
+
+      document.getElementById('temp').textContent  = (d.temperature ?? '--') + ' °C';
+      document.getElementById('hum').textContent   = (d.humidity ?? '--') + ' %';
+      document.getElementById('dist').textContent  = (d.distance ?? '--') + ' cm';
+
+      const smokeEl = document.getElementById('smoke');
+      smokeEl.textContent = (d.smoke ?? '--') + ' %';
+      smokeEl.className = 'value' + (d.smokeDanger ? ' danger' : d.smokeWarning ? ' warn' : '');
+
+      const distEl = document.getElementById('dist');
+      distEl.className = 'value' + (d.distanceWarning ? ' warn' : '');
+
+      for (let i = 1; i <= 5; i++) {
+        ledState[i] = !!d['led' + i];
+        const btn = document.querySelector(`.led-btn[data-led="${i}"]`);
+        btn.classList.toggle('on', ledState[i]);
+      }
+
+      document.getElementById('notif').textContent = d.notification || '—';
+    });
+
+    // ---------- Commands, now with ack tracking ----------
+    function sendCommand(cmd, btn) {
+      if (!brokerConnected) {
+        log('WARN', `Not connected — cannot send "${cmd}"`);
+        return;
+      }
+      const id = Math.random().toString(16).slice(2, 10);
+      const payload = `${id}|${cmd}`;
+
+      client.publish(TOPIC_CMD, payload, { qos: 1 }, (err) => {
+        if (err) log('ERROR', `Publish failed for "${cmd}": ${err.message}`);
+      });
+
+      if (btn) btn.classList.add('pending');
+      const timeoutHandle = setTimeout(() => {
+        pendingAcks.delete(id);
+        if (btn) btn.classList.remove('pending');
+        log('WARN', `No ack received for "${cmd}" within ${ACK_TIMEOUT_MS / 1000}s — device may be offline`);
+      }, ACK_TIMEOUT_MS);
+
+      pendingAcks.set(id, { cmd, timeoutHandle, btn });
+      log('INFO', `Sent "${cmd}" [id=${id}]`);
+    }
+
+    document.getElementById('leds').addEventListener('click', (e) => {
+      const btn = e.target.closest('.led-btn');
+      if (!btn) return;
+      const n = btn.dataset.led;
+      const next = !ledState[n];
+      sendCommand(`led${n}:${next ? 'on' : 'off'}`, btn);
+    });
+
+    document.getElementById('allOn').addEventListener('click', (e) => {
+      sendCommand('led:all:on', e.target);
+    });
+    document.getElementById('allOff').addEventListener('click', (e) => {
+      sendCommand('led:all:off', e.target);
+    });
+  }
+</script>
+
+</body>
+</html>

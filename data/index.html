@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LumiOS X — Command Center</title>
+<style>
+
+:root{
+  --bg:#05070c;
+  --panel:rgba(255,255,255,.065);
+  --panel-b:rgba(255,255,255,.09);
+  --cyan:#00e5ff;
+  --blue:#58a6ff;
+  --green:#00ff88;
+  --red:#ff3b5c;
+  --amber:#ffb020;
+  --magenta:#ff5fd1;
+  --txt-dim:#8b98ab;
+  --radius:18px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{height:100%;}
+
+body{
+  font-family:'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  background:var(--bg);
+  color:#eef2f7;
+  overflow-x:hidden;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+}
+
+canvas#bgCanvas{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  opacity:.55;
+}
+
+.bg-grid{
+  position:fixed;
+  inset:0;
+  z-index:-3;
+  background-image:
+    linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px);
+  background-size:42px 42px;
+  -webkit-mask-image:radial-gradient(circle at 50% 0%, black, transparent 75%);
+  mask-image:radial-gradient(circle at 50% 0%, black, transparent 75%);
+}
+
+.bg-glow{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(0,229,255,.10), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(255,95,209,.08), transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(0,255,136,.07), transparent 45%);
+}
+
+.wrap{
+  width:95%;
+  max-width:1480px;
+  margin:0 auto;
+  padding:24px 0 60px;
+}
+
+/* ============ HEADER ============ */
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  flex-wrap:wrap;
+  padding:18px 24px;
+  border-radius:var(--radius);
+  background:var(--panel);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  border:1px solid var(--panel-b);
+  box-shadow:0 0 40px rgba(0,229,255,.07);
+  animation:fadeDown .6s ease both;
+  position:relative;
+  overflow:hidden;
+}
+
+.topbar::after{
+  content:"";
+  position:absolute;
+  top:0;left:-100%;
+  width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,.08),transparent);
+  animation:sheen 6s linear infinite;
+}
+
+@keyframes sheen{
+  0%{left:-60%;}
+  100%{left:120%;}
+}
+
+.brand{display:flex;align-items:center;gap:14px;}
+
+.brand .mark{
+  width:46px;height:46px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  background:linear-gradient(135deg,#0d3b52,#062230);
+  border:1px solid rgba(0,229,255,.3);
+  box-shadow:0 0 20px rgba(0,229,255,.35), inset 0 0 12px rgba(0,229,255,.15);
+  animation:pulseRing 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseRing{
+  0%,100%{box-shadow:0 0 16px rgba(0,229,255,.3), inset 0 0 10px rgba(0,229,255,.12);}
+  50%{box-shadow:0 0 30px rgba(0,229,255,.55), inset 0 0 16px rgba(0,229,255,.25);}
+}
+
+.brand h1{
+  font-size:24px;
+  letter-spacing:.5px;
+  background:linear-gradient(90deg,#58a6ff,#00e5ff 50%,#00ff88);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  background-size:200% auto;
+  animation:hueShift 6s linear infinite;
+}
+
+@keyframes hueShift{
+  0%{background-position:0% 50%;}
+  100%{background-position:200% 50%;}
+}
+
+.brand p{color:var(--txt-dim);font-size:12.5px;margin-top:3px;letter-spacing:.5px;}
+
+.hstats{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+
+.pill{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;
+  border-radius:30px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--panel-b);
+  font-size:13px;
+  font-weight:600;
+}
+
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 2s ease-in-out infinite;}
+.dot.off{background:var(--red);box-shadow:0 0 10px var(--red);animation:none;}
+
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+.clock{font-size:15px;color:var(--cyan);font-variant-numeric:tabular-nums;}
+.uptime{font-size:12px;color:var(--txt-dim);}
+
+/* ============ LAYOUT ============ */
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:20px;
+  margin-top:22px;
+}
+
+.grid2{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:20px;
+  margin-top:22px;
+}
+
+.grid2-single{grid-template-columns:1fr;}
+
+.card{
+  background:var(--panel);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  border:1px solid var(--panel-b);
+  border-radius:var(--radius);
+  padding:20px;
+  opacity:0;
+  animation:fadeUp .55s ease forwards;
+  transition:.3s;
+  position:relative;
+}
+
+.card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 8px 30px rgba(0,229,255,.15);
+  border-color:rgba(0,229,255,.25);
+}
+
+.grid .card:nth-child(1){animation-delay:.05s;}
+.grid .card:nth-child(2){animation-delay:.12s;}
+.grid .card:nth-child(3){animation-delay:.19s;}
+.grid .card:nth-child(4){animation-delay:.26s;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
+
+/* ============ GAUGES ============ */
+
+.gauge-card{display:flex;flex-direction:column;align-items:center;text-align:center;}
+
+.gauge-label{font-size:13px;color:var(--txt-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+
+.gauge-wrap{position:relative;width:140px;height:140px;}
+
+.gauge-wrap svg{transform:rotate(-90deg);}
+
+.gauge-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:10;}
+.gauge-fg{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1),stroke .4s;filter:drop-shadow(0 0 6px currentColor);}
+.gauge-fg.c-cyan{color:var(--cyan);stroke:var(--cyan);}
+.gauge-fg.c-blue{color:var(--blue);stroke:var(--blue);}
+.gauge-fg.c-amber{color:var(--amber);stroke:var(--amber);}
+.gauge-fg.c-magenta{color:var(--magenta);stroke:var(--magenta);}
+
+.gauge-val{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+
+.gauge-val .num{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;}
+.gauge-val .unit{font-size:11px;color:var(--txt-dim);margin-top:2px;}
+
+/* ============ ROWS / DATA LISTS ============ */
+
+.card h2{
+  font-size:16px;
+  color:var(--blue);
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+  letter-spacing:.3px;
+}
+
+.row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.055);
+  font-size:14px;
+}
+.row:last-child{border-bottom:none;}
+
+.label{color:var(--txt-dim);}
+.value{font-weight:600;color:var(--cyan);transition:.3s;font-variant-numeric:tabular-nums;}
+.value.good{color:var(--green);}
+.value.warn{color:var(--amber);}
+.value.bad{color:var(--red);}
+
+/* signal bars */
+.sig{display:flex;align-items:flex-end;gap:2px;height:16px;}
+.sig i{width:4px;background:rgba(255,255,255,.15);border-radius:1px;display:block;}
+.sig i:nth-child(1){height:25%;}
+.sig i:nth-child(2){height:45%;}
+.sig i:nth-child(3){height:65%;}
+.sig i:nth-child(4){height:85%;}
+.sig i:nth-child(5){height:100%;}
+.sig i.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+/* ============ CHART ============ */
+
+.chart-card canvas{width:100%;height:220px;display:block;}
+.legend{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;}
+.legend span{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--txt-dim);}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.legend i.c-amber{background:var(--amber);}
+.legend i.c-magenta{background:var(--magenta);}
+.signal-row{display:flex;align-items:center;gap:10px;}
+.wifi-scan-list{margin-top:14px;}
+.wifi-add-row{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;}
+.wifi-input{flex:1;min-width:140px;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--panel-b);color:#fff;font-size:13px;}
+
+/* ============ OLED MIRROR ============ */
+
+.oled-screen{
+  background:#000;
+  border-radius:12px;
+  border:6px solid #111823;
+  padding:18px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:inset 0 0 30px rgba(0,229,255,.12), 0 0 25px rgba(0,229,255,.08);
+  font-family:'Courier New',monospace;
+  min-height:150px;
+}
+
+.oled-screen::before{
+  content:"";
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,rgba(0,229,255,.05) 0px,rgba(0,229,255,.05) 1px,transparent 1px,transparent 3px);
+  pointer-events:none;
+}
+
+.oled-scan{
+  position:absolute;left:0;right:0;height:40px;
+  background:linear-gradient(180deg,transparent,rgba(0,229,255,.12),transparent);
+  animation:scan 3.2s linear infinite;
+  pointer-events:none;
+}
+
+@keyframes scan{0%{top:-40px;}100%{top:100%;}}
+
+.oled-line{color:#00e5ff;font-size:13px;line-height:1.9;text-shadow:0 0 6px rgba(0,229,255,.6);letter-spacing:.5px;}
+.oled-line b{color:#00ff88;text-shadow:0 0 6px rgba(0,255,136,.6);}
+.oled-page{font-size:20px;font-weight:bold;color:#fff;text-shadow:0 0 10px #00e5ff;margin-bottom:8px;}
+
+#oledCanvas{
+  width:100%;
+  height:auto;
+  aspect-ratio:128/64;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  display:block;
+  filter:drop-shadow(0 0 6px rgba(0,229,255,.5));
+}
+.oled-badge{
+  font-size:11px;
+  font-weight:600;
+  padding:3px 10px;
+  border-radius:20px;
+  background:rgba(0,229,255,.12);
+  border:1px solid rgba(0,229,255,.3);
+  color:var(--cyan);
+  margin-left:10px;
+  vertical-align:middle;
+  letter-spacing:.5px;
+}
+.oled-caption{color:var(--txt-dim);font-size:12px;margin-top:10px;}
+
+/* ============ LEDs ============ */
+
+.led-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
+
+.led-item{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--panel-b);
+  border-radius:14px;
+  padding:16px;
+  text-align:center;
+  transition:.3s;
+}
+
+.led-icon{
+  width:46px;height:46px;
+  margin:0 auto 10px;
+  border-radius:50%;
+  background:radial-gradient(circle,#2a2f3a,#161a22);
+  border:2px solid rgba(255,255,255,.1);
+  position:relative;
+  transition:.35s;
+}
+
+.led-item.on .led-icon{
+  background:radial-gradient(circle,#3dffa8,#00c853);
+  border-color:#00ff88;
+  box-shadow:0 0 22px rgba(0,255,136,.75),0 0 45px rgba(0,255,136,.35);
+  animation:ledBreathe 1.7s ease-in-out infinite;
+}
+
+@keyframes ledBreathe{
+  0%,100%{box-shadow:0 0 18px rgba(0,255,136,.6),0 0 35px rgba(0,255,136,.25);}
+  50%{box-shadow:0 0 28px rgba(0,255,136,.95),0 0 55px rgba(0,255,136,.45);}
+}
+
+.led-name{font-size:13px;color:#c9d3e0;margin-bottom:10px;font-weight:600;}
+
+.switch{
+  position:relative;width:52px;height:26px;margin:0 auto;
+  background:#2a2f3a;border-radius:30px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.12);
+  transition:.3s;
+}
+
+.switch::before{
+  content:"";position:absolute;top:2px;left:2px;
+  width:20px;height:20px;border-radius:50%;
+  background:#8892a0;
+  transition:.3s cubic-bezier(.4,0,.2,1);
+}
+
+.led-item.on .switch{background:linear-gradient(135deg,#00c853,#00ff88);border-color:#00ff88;}
+.led-item.on .switch::before{transform:translateX(26px);background:#fff;}
+
+.master-row{display:flex;gap:12px;margin-top:16px;}
+.master-row button{flex:1;}
+
+/* ============ BUTTONS ============ */
+
+button{
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  border:1px solid var(--panel-b);
+  padding:10px 18px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+  font-size:13px;
+  letter-spacing:.4px;
+  transition:.25s;
+}
+
+button:hover{transform:translateY(-2px);border-color:rgba(0,229,255,.4);box-shadow:0 4px 18px rgba(0,229,255,.2);}
+button:active{transform:scale(.95);}
+
+.btn-on{background:linear-gradient(135deg,#00c853,#00e676);border:none;color:#04140a;}
+.btn-off{background:linear-gradient(135deg,#d50000,#ff1744);border:none;}
+.btn-primary{background:linear-gradient(135deg,#1f6feb,#00e5ff);border:none;color:#02131c;}
+
+/* ============ DEV PANEL ============ */
+
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{
+  padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;
+  background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);color:var(--cyan);
+}
+.chip.green{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.3);color:var(--green);}
+.chip.amber{background:rgba(255,176,32,.12);border-color:rgba(255,176,32,.35);color:var(--amber);}
+.chip.red{background:rgba(255,59,92,.12);border-color:rgba(255,59,92,.35);color:var(--red);}
+
+.dev-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+/* ============ v1.0 — HEALTH / OTA / VERSION ============ */
+
+.health-bar-wrap{margin:9px 0;}
+.health-bar-label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--txt-dim);margin-bottom:4px;}
+.health-bar-label span:last-child{color:#eef2f7;font-weight:600;}
+.health-bar-track{height:8px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden;}
+.health-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--blue));transition:width .5s ease,background .3s;}
+.health-bar-fill.warn{background:linear-gradient(90deg,var(--amber),#ff8a00);}
+.health-bar-fill.bad{background:linear-gradient(90deg,var(--red),#ff1744);}
+
+.ota-drop{
+  border:1.5px dashed rgba(255,255,255,.18);border-radius:12px;padding:22px 14px;
+  text-align:center;cursor:pointer;transition:.25s;margin-top:6px;
+}
+.ota-drop:hover{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.04);}
+.ota-drop.drag{border-color:var(--cyan);background:rgba(0,229,255,.08);}
+.ota-drop input{display:none;}
+.ota-filename{font-size:12.5px;color:var(--txt-dim);margin-top:8px;word-break:break-all;}
+
+.ota-progress-wrap{margin-top:14px;display:none;}
+.ota-progress-track{height:12px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden;}
+.ota-progress-fill{height:100%;width:0%;border-radius:8px;background:linear-gradient(90deg,var(--cyan),var(--magenta));transition:width .25s;}
+.ota-status-text{font-size:12.5px;color:var(--txt-dim);margin-top:8px;}
+.ota-status-text.ok{color:var(--green);}
+.ota-status-text.bad{color:var(--red);}
+
+pre#rawJson{
+  margin-top:14px;
+  background:#000;
+  border-radius:10px;
+  padding:14px;
+  font-size:11.5px;
+  color:#7ee787;
+  max-height:220px;
+  overflow:auto;
+  display:none;
+  border:1px solid var(--panel-b);
+}
+
+/* ============ NOTIFICATIONS ============ */
+
+.notif-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.notif-item{
+  background:rgba(255,255,255,.03);
+  border-left:3px solid var(--cyan);
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:13.5px;
+  animation:slideIn .35s ease;
+  display:flex;justify-content:space-between;gap:10px;
+}
+.notif-item time{color:var(--txt-dim);font-size:11px;white-space:nowrap;}
+.notif-item.warning{border-left-color:#ffb300;}
+.notif-item.critical{border-left-color:#ff5252;background:rgba(255,82,82,.08);}
+.notif-item .prio-badge{font-size:10px;letter-spacing:.5px;text-transform:uppercase;opacity:.75;margin-right:6px;}
+
+.led-item.override .led-name::after{content:" (manual)";font-size:9px;opacity:.6;}
+.led-auto-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.led-mode-chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--panel-b);}
+.led-mode-chip.auto{color:#00ff88;border-color:#00ff88;}
+.led-mode-chip.manual{color:#ffb300;border-color:#ffb300;}
+
+@keyframes slideIn{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:translateX(0);}}
+
+.notif-list::-webkit-scrollbar{width:6px;}
+.notif-list::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);border-radius:10px;}
+
+/* ============ FOOTER ============ */
+
+.footer{
+  text-align:center;
+  color:var(--txt-dim);
+  font-size:12.5px;
+  margin-top:36px;
+  letter-spacing:.5px;
+}
+.footer span{color:var(--cyan);}
+
+/* ============ RESPONSIVE ============ */
+
+@media(max-width:640px){
+  .brand h1{font-size:20px;}
+  .gauge-wrap{width:118px;height:118px;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+  .hstats{width:100%;justify-content:space-between;}
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="wrap">
+
+  <!-- ===================== TOPBAR ===================== -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">🚀</div>
+      <div>
+        <h1>LumiOS X</h1>
+        <p>Intelligent IoT Command Center · ESP32</p>
+      </div>
+    </div>
+
+    <div class="hstats">
+      <div class="pill"><span class="dot" id="connDot"></span><span id="connText">Connecting…</span></div>
+      <div class="pill">⏱ <span id="latency">-- ms</span></div>
+      <div>
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="uptime" id="uptimeText">Uptime: --</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GAUGES ===================== -->
+  <div class="grid">
+
+    <div class="card gauge-card">
+      <div class="gauge-label">CPU Frequency</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 140 140">
+          <circle class="gauge-bg" cx="70" cy="70" r="58"></circle>
+          <circle class="gauge-fg c-cyan" id="gCpu" cx="70" cy="70" r="58"></circle>
+        </svg>
+        <div class="gauge-val"><div class="num" id="cpuNum">--</div><div class="unit">MHz</div></div>
+      </div>
+    </div>
+
+    <div class="card gauge-card">
+      <div class="gauge-label">Free Heap</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 140 140">
+          <circle class="gauge-bg" cx="70" cy="70" r="58"></circle>
+          <circle class="gauge-fg c-blue" id="gHeap" cx="70" cy="70" r="58"></circle>
+        </svg>
+        <div class="gauge-val"><div class="num" id="heapNum">--</div><div class="unit">KB free</div></div>
+      </div>
+    </div>
+
+    <div class="card gauge-card">
+      <div class="gauge-label">Temperature</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 140 140">
+          <circle class="gauge-bg" cx="70" cy="70" r="58"></circle>
+          <circle class="gauge-fg c-amber" id="gTemp" cx="70" cy="70" r="58"></circle>
+        </svg>
+        <div class="gauge-val"><div class="num" id="tempNum">--</div><div class="unit">°C</div></div>
+      </div>
+    </div>
+
+    <div class="card gauge-card">
+      <div class="gauge-label">Humidity</div>
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 140 140">
+          <circle class="gauge-bg" cx="70" cy="70" r="58"></circle>
+          <circle class="gauge-fg c-magenta" id="gHum" cx="70" cy="70" r="58"></circle>
+        </svg>
+        <div class="gauge-val"><div class="num" id="humNum">--</div><div class="unit">%</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== NETWORK + SENSORS ===================== -->
+  <div class="grid2">
+
+    <div class="card">
+      <h2>📡 Network</h2>
+      <div class="row"><div class="label">SSID</div><div class="value" id="ssid">Loading…</div></div>
+      <div class="row"><div class="label">IP Address</div><div class="value" id="ip">Loading…</div></div>
+      <div class="row"><div class="label">MAC</div><div class="value" id="mac">Loading…</div></div>
+      <div class="row">
+        <div class="label">Signal</div>
+        <div class="signal-row">
+          <div class="sig" id="sigBars"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="value" id="rssi">-- dBm</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🌡 Sensors</h2>
+      <div class="row"><div class="label">Temperature</div><div class="value" id="temperature">Loading…</div></div>
+      <div class="row"><div class="label">Humidity</div><div class="value" id="humidity">Loading…</div></div>
+      <div class="row"><div class="label">Distance</div><div class="value" id="distance">Loading…</div></div>
+      <div class="row"><div class="label">Smoke / Gas</div><div class="value" id="smoke">Loading…</div></div>
+      <div class="row"><div class="label">Sensor Status</div><div class="value" id="sensorStatus">Loading…</div></div>
+    </div>
+
+    <!-- Phase 6: Plugin Sensors — fully auto-rendered from /api/plugins.
+         Adding a new REGISTER_SENSOR() sensor firmware-side makes a row
+         appear here automatically; nothing in this HTML/JS needs to
+         change when a new sensor is added. -->
+    <div class="card" id="pluginSensorsCard">
+      <h2>🔌 Plugin Sensors</h2>
+      <div id="pluginSensorsList">
+        <div class="row"><div class="label" style="opacity:.6">No plugin sensors registered yet</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💻 System</h2>
+      <div class="row"><div class="label">Flash Size</div><div class="value" id="flash">Loading…</div></div>
+      <div class="row"><div class="label">Uptime</div><div class="value" id="uptime">Loading…</div></div>
+      <div class="row"><div class="label">Project</div><div class="value" id="project">LumiOS X</div></div>
+      <div class="row"><div class="label">Firmware</div><div class="value" id="version">1.0.0</div></div>
+    </div>
+
+  </div>
+
+  <!-- ===================== LIVE CHART ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card chart-card">
+      <h2>📈 Live Telemetry</h2>
+      <canvas id="chart"></canvas>
+      <div class="legend">
+        <span><i class="c-amber"></i>Temperature (°C)</span>
+        <span><i class="c-magenta"></i>Humidity (%)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== OLED MIRROR ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card">
+      <h2>🖥 OLED Live Mirror <span class="oled-badge" id="oledPageBadge">HOME</span></h2>
+      <div class="oled-screen">
+        <div class="oled-scan"></div>
+        <canvas id="oledCanvas" width="128" height="64"></canvas>
+      </div>
+      <div class="oled-caption">Pixel-accurate mirror of the physical SH1106 display — auto-switches with the device's page cycle.</div>
+    </div>
+  </div>
+
+  <!-- ===================== LED CONTROL ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card">
+      <h2>💡 LED Control Matrix</h2>
+      <div class="led-grid">
+        <div class="led-item" id="led1" onclick="toggleLED(1)">
+          <div class="led-icon"></div>
+          <div class="led-name">Power</div>
+          <div class="switch"></div>
+        </div>
+        <div class="led-item" id="led2" onclick="toggleLED(2)">
+          <div class="led-icon"></div>
+          <div class="led-name">WiFi</div>
+          <div class="switch"></div>
+        </div>
+        <div class="led-item" id="led3" onclick="toggleLED(3)">
+          <div class="led-icon"></div>
+          <div class="led-name">Sensor</div>
+          <div class="switch"></div>
+        </div>
+        <div class="led-item" id="led4" onclick="toggleLED(4)">
+          <div class="led-icon"></div>
+          <div class="led-name">System</div>
+          <div class="switch"></div>
+        </div>
+        <div class="led-item" id="led5" onclick="toggleLED(5)">
+          <div class="led-icon"></div>
+          <div class="led-name">Alert</div>
+          <div class="switch"></div>
+        </div>
+      </div>
+      <div class="master-row">
+        <button class="btn-on" onclick="allLedsOn()">⚡ ALL ON</button>
+        <button class="btn-off" onclick="allLedsOff()">⚫ ALL OFF</button>
+      </div>
+      <div class="led-auto-row">
+        <span class="led-mode-chip auto" id="ledAutoChip">Mode: --</span>
+        <button onclick="toggleLedAuto()">🤖 TOGGLE AUTO MODE</button>
+        <span style="font-size:11px;color:var(--txt-dim)">Auto mode drives Power/WiFi/Sensor/System/Alert from live status. Toggling an LED by hand hands it back for 30s.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== v1.0 — SYSTEM HEALTH & FIRMWARE ===================== -->
+  <div class="grid2">
+
+    <div class="card" id="versionCard">
+      <h2>🏷 Version Manager</h2>
+      <div class="row"><div class="label">Firmware</div><div class="value" id="verFirmware">--</div></div>
+      <div class="row"><div class="label">Build Date</div><div class="value" id="verBuildDate">--</div></div>
+      <div class="row"><div class="label">Build Time</div><div class="value" id="verBuildTime">--</div></div>
+      <div class="row"><div class="label">Chip</div><div class="value" id="verChip">--</div></div>
+      <div class="row"><div class="label">Flash Size</div><div class="value" id="verFlashSize">--</div></div>
+      <div class="row"><div class="label">Free Flash</div><div class="value" id="verFreeFlash">--</div></div>
+      <div class="row"><div class="label">API / UI / OLED</div><div class="value" id="verLayers">--</div></div>
+    </div>
+
+    <div class="card" id="healthCard">
+      <h2>💓 Health Monitor</h2>
+
+      <div class="health-bar-wrap">
+        <div class="health-bar-label"><span>Heap Used</span><span id="healthHeapPct">--%</span></div>
+        <div class="health-bar-track"><div class="health-bar-fill" id="healthHeapBar" style="width:0%"></div></div>
+      </div>
+      <div class="health-bar-wrap">
+        <div class="health-bar-label"><span>LittleFS Used</span><span id="healthFsPct">--%</span></div>
+        <div class="health-bar-track"><div class="health-bar-fill" id="healthFsBar" style="width:0%"></div></div>
+      </div>
+      <div class="health-bar-wrap">
+        <div class="health-bar-label"><span>CPU Load (est.)</span><span id="healthCpuPct">--%</span></div>
+        <div class="health-bar-track"><div class="health-bar-fill" id="healthCpuBar" style="width:0%"></div></div>
+      </div>
+
+      <div class="row"><div class="label">WiFi</div><div class="value" id="healthWifi">--</div></div>
+      <div class="row"><div class="label">MQTT / Cloud Relay</div><div class="value" id="healthMqtt">--</div></div>
+      <div class="row"><div class="label">Sensors</div><div class="value" id="healthSensors">--</div></div>
+      <div class="row"><div class="label">Boots / Unexpected Restarts</div><div class="value" id="healthBoots">--</div></div>
+      <div class="row"><div class="label">Uptime</div><div class="value" id="healthUptime">--</div></div>
+    </div>
+
+  </div>
+
+  <!-- ===================== v1.0 — OTA FIRMWARE UPDATE ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card" id="otaCard">
+      <h2>⚡ OTA Firmware Update</h2>
+      <div class="row"><div class="label">OTA Enabled</div><div class="value" id="otaEnabledVal">--</div></div>
+      <div class="row"><div class="label">Last Result</div><div class="value" id="otaLastResult">--</div></div>
+
+      <div class="ota-drop" id="otaDrop" onclick="document.getElementById('otaFile').click()">
+        <input type="file" id="otaFile" accept=".bin">
+        <div>📦 Tap to choose a compiled <b>.bin</b> firmware image, or drag one here</div>
+        <div class="ota-filename" id="otaFilename">No file selected</div>
+      </div>
+
+      <div class="dev-actions">
+        <button class="btn-primary" id="otaUploadBtn" onclick="startOtaUpload()">⬆ UPLOAD &amp; FLASH</button>
+        <button onclick="window.open('/update','_blank')">🗔 OPEN STANDALONE UPDATER</button>
+      </div>
+
+      <div class="ota-progress-wrap" id="otaProgressWrap">
+        <div class="ota-progress-track"><div class="ota-progress-fill" id="otaProgressFill"></div></div>
+        <div class="ota-status-text" id="otaStatusText">Idle</div>
+      </div>
+
+      <div style="font-size:11px;color:var(--txt-dim);margin-top:10px;">
+        Protected OTA: gated by Dashboard Auth (if enabled) and the OTA Enabled setting. Firmware is validated
+        (image header check) before flashing, and the device reboots automatically once flashing succeeds.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== DEVELOPER PANEL ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card">
+      <h2>👨‍💻 Developer Panel</h2>
+      <div class="chips">
+        <div class="chip" id="devModeChip">Developer Mode: --</div>
+        <div class="chip green" id="themeChip">Theme: --</div>
+        <div class="chip" id="bootChip">Boots: --</div>
+        <div class="chip" id="resetChip">Last Reset: --</div>
+        <div class="chip" id="authChip">Auth: --</div>
+      </div>
+      <div class="dev-actions">
+        <button class="btn-primary" onclick="pingDevice()">🔧 PING</button>
+        <button onclick="toggleDevMode()">👨‍💻 TOGGLE DEV MODE</button>
+        <button onclick="toggleAnimation()">✨ TOGGLE ANIMATION</button>
+        <button onclick="toggleAutoPage()">📄 TOGGLE AUTO-PAGE</button>
+        <button onclick="location.reload()">🔄 REFRESH PAGE</button>
+        <button onclick="toggleRaw()">📄 RAW JSON</button>
+        <button onclick="window.open('/update','_blank')">⚡ OTA FIRMWARE UPDATE</button>
+        <button onclick="toggleAuth()">🔐 TOGGLE DASHBOARD AUTH</button>
+        <button class="btn-off" onclick="restartDevice()">⚠ RESTART DEVICE</button>
+      </div>
+      <pre id="rawJson">{}</pre>
+    </div>
+  </div>
+
+  <!-- ===================== WIFI MANAGER ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card">
+      <h2>📶 WiFi Manager</h2>
+      <div class="dev-actions">
+        <button class="btn-primary" onclick="scanWifi()">🔍 SCAN NETWORKS</button>
+      </div>
+      <div class="notif-list wifi-scan-list" id="wifiScanList">
+        <div class="notif-item"><span>Tap "Scan Networks" to see nearby WiFi.</span></div>
+      </div>
+
+      <div class="wifi-add-row">
+        <input id="wifiSsid" placeholder="SSID" class="wifi-input">
+        <input id="wifiPass" placeholder="Password" type="password" class="wifi-input">
+        <button class="btn-on" onclick="saveWifi()">💾 SAVE WIFI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== NOTIFICATIONS ===================== -->
+  <div class="grid2 grid2-single">
+    <div class="card">
+      <h2>📢 Notification Console</h2>
+      <div class="dev-actions" style="margin-bottom:12px;">
+        <button onclick="clearNotifications()">🧹 CLEAR HISTORY</button>
+      </div>
+      <div class="notif-list" id="notifList">
+        <div class="notif-item"><span>Waiting for device data…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">LumiOS X <span>©</span> 2026 · Autonomous IoT Dashboard</div>
+
+</div>
+
+<script>
+/* ================================================================
+   LumiOS X Dashboard — Frontend Engine
+   Talks to: /info (GET, JSON), /ping, /led/{1-5}/on|off|toggle
+   ================================================================ */
+
+const POLL_MS   = 1200;
+const HISTORY_N = 40;
+
+let lastData      = null;
+let lastNotif      = "";
+let failCount      = 0;
+let tempHist        = [];
+let humHist          = [];
+
+/* ---------------- Clock ---------------- */
+function updateClock(){
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock,1000);
+updateClock();
+
+/* ---------------- Uptime formatter ---------------- */
+function fmtUptime(sec){
+  sec = parseInt(sec)||0;
+  const d = Math.floor(sec/86400);
+  const h = Math.floor((sec%86400)/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  let out = "";
+  if(d) out += d+"d ";
+  out += String(h).padStart(2,"0")+"h "+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s";
+  return out;
+}
+
+/* ---------------- Gauges (SVG ring) ---------------- */
+const R = 58;
+const CIRC = 2*Math.PI*R;
+
+function initGauges(){
+  document.querySelectorAll(".gauge-fg").forEach(el=>{
+    el.style.strokeDasharray = CIRC;
+    el.style.strokeDashoffset = CIRC;
+  });
+}
+initGauges();
+
+function setGauge(id, value, max){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const pct = Math.max(0, Math.min(1, value/max));
+  el.style.strokeDasharray = CIRC;
+  el.style.strokeDashoffset = CIRC * (1 - pct);
+}
+
+/* ---------------- Notification log ---------------- */
+function pushNotification(msg, priority){
+  if(!msg || msg === lastNotif) return;
+  lastNotif = msg;
+  const list = document.getElementById("notifList");
+  if(list.children.length===1 && list.children[0].textContent.includes("Waiting")){
+    list.innerHTML = "";
+  }
+  const prio = (priority || "info").toLowerCase();
+  const item = document.createElement("div");
+  item.className = "notif-item" + (prio !== "info" ? " "+prio : "");
+  const t = new Date().toLocaleTimeString();
+  const badge = prio === "critical" ? "🔴" : (prio === "warning" ? "🟠" : "");
+  item.innerHTML = "<span>"+(badge?"<span class='prio-badge'>"+badge+"</span>":"")+msg+"</span><time>"+t+"</time>";
+  list.prepend(item);
+  while(list.children.length > 12) list.removeChild(list.lastChild);
+}
+
+/* ---------------- Background particle animation ---------------- */
+(function bgAnim(){
+  const canvas = document.getElementById("bgCanvas");
+  const ctx = canvas.getContext("2d");
+  let w,h,particles=[];
+
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const N = Math.min(60, Math.floor(w/28));
+  for(let i=0;i<N;i++){
+    particles.push({
+      x:Math.random()*w, y:Math.random()*h,
+      vx:(Math.random()-0.5)*0.35, vy:(Math.random()-0.5)*0.35,
+      r:Math.random()*1.8+0.6
+    });
+  }
+
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    for(let i=0;i<particles.length;i++){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0||p.x>w) p.vx*=-1;
+      if(p.y<0||p.y>h) p.vy*=-1;
+
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = "rgba(0,229,255,.55)";
+      ctx.fill();
+
+      for(let j=i+1;j<particles.length;j++){
+        const q = particles[j];
+        const dx=p.x-q.x, dy=p.y-q.y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if(dist < 120){
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle = "rgba(0,229,255,"+(0.12*(1-dist/120))+")";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+/* ---------------- Live telemetry chart ---------------- */
+const chartCanvas = document.getElementById("chart");
+const chartCtx = chartCanvas.getContext("2d");
+
+function resizeChart(){
+  const rect = chartCanvas.getBoundingClientRect();
+  chartCanvas.width = rect.width * devicePixelRatio;
+  chartCanvas.height = rect.height * devicePixelRatio;
+  chartCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener("resize", resizeChart);
+
+function drawChart(){
+  resizeChart();
+  const rect = chartCanvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  chartCtx.clearRect(0,0,w,h);
+
+  // grid
+  chartCtx.strokeStyle = "rgba(255,255,255,.06)";
+  chartCtx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = (h/4)*i;
+    chartCtx.beginPath();
+    chartCtx.moveTo(0,y);
+    chartCtx.lineTo(w,y);
+    chartCtx.stroke();
+  }
+
+  if(tempHist.length < 2) return;
+
+  function plot(data, color, min, max){
+    chartCtx.beginPath();
+    chartCtx.lineWidth = 2.2;
+    chartCtx.strokeStyle = color;
+    chartCtx.shadowColor = color;
+    chartCtx.shadowBlur = 8;
+    data.forEach((v,i)=>{
+      const x = (i/(HISTORY_N-1))*w;
+      const pct = Math.max(0,Math.min(1,(v-min)/(max-min)));
+      const y = h - pct*h;
+      if(i===0) chartCtx.moveTo(x,y); else chartCtx.lineTo(x,y);
+    });
+    chartCtx.stroke();
+    chartCtx.shadowBlur = 0;
+  }
+
+  plot(tempHist, "#ffb020", 0, 50);
+  plot(humHist,  "#ff5fd1", 0, 100);
+}
+
+/* ---------------- Signal bars ---------------- */
+function updateSignal(rssi){
+  const bars = document.querySelectorAll("#sigBars i");
+  let level = 0;
+  if(rssi > -55) level = 5;
+  else if(rssi > -65) level = 4;
+  else if(rssi > -75) level = 3;
+  else if(rssi > -85) level = 2;
+  else if(rssi > -95) level = 1;
+  bars.forEach((b,i)=> b.classList.toggle("on", i < level));
+}
+
+/* ---------------- LED UI ---------------- */
+function updateLed(id, state, overridden){
+  const el = document.getElementById("led"+id);
+  if(!el) return;
+  el.classList.toggle("on", !!(state == 1 || state === true));
+  el.classList.toggle("override", !!(overridden == true || overridden === "true"));
+}
+
+async function toggleLedAuto(){
+  try{
+    const r = await fetch("/led/auto/toggle");
+    pushNotification("🤖 LED Automation: " + await r.text());
+  }catch(e){ pushNotification("⚠ Could not reach device"); }
+  fetchInfo();
+}
+
+async function toggleLED(id){
+  try{
+    await fetch("/led/"+id+"/toggle");
+    pushNotification("💡 LED "+id+" toggled");
+  }catch(e){
+    pushNotification("⚠ Could not reach LED "+id);
+  }
+  fetchInfo();
+}
+
+async function allLedsOn(){
+  try{
+    await Promise.all([1,2,3,4,5].map(i=>fetch("/led/"+i+"/on")));
+    pushNotification("💡 All LEDs turned ON");
+  }catch(e){
+    pushNotification("⚠ Could not reach device");
+  }
+  fetchInfo();
+}
+
+async function allLedsOff(){
+  try{
+    await Promise.all([1,2,3,4,5].map(i=>fetch("/led/"+i+"/off")));
+    pushNotification("⚫ All LEDs turned OFF");
+  }catch(e){
+    pushNotification("⚠ Could not reach device");
+  }
+  fetchInfo();
+}
+
+/* ---------------- Ping ---------------- */
+async function pingDevice(){
+  const t0 = performance.now();
+  try{
+    const r = await fetch("/ping");
+    const txt = await r.text();
+    const ms = Math.round(performance.now()-t0);
+    document.getElementById("latency").textContent = ms+" ms";
+    pushNotification("🔧 Ping: "+txt+" ("+ms+" ms)");
+  }catch(e){
+    pushNotification("⚠ Ping failed — device unreachable");
+  }
+}
+
+/* ---------------- Raw JSON toggle ---------------- */
+function toggleRaw(){
+  const el = document.getElementById("rawJson");
+  el.style.display = (el.style.display === "block") ? "none" : "block";
+}
+
+/* ---------------- Developer tools ---------------- */
+async function toggleDevMode(){
+  try{
+    const r = await fetch("/settings/developer/toggle");
+    pushNotification("👨‍💻 Developer Mode: " + await r.text());
+  }catch(e){ pushNotification("⚠ Could not reach device"); }
+  fetchInfo();
+}
+
+async function toggleAnimation(){
+  try{
+    const r = await fetch("/settings/animation/toggle");
+    pushNotification("✨ Animation: " + await r.text());
+  }catch(e){ pushNotification("⚠ Could not reach device"); }
+}
+
+async function toggleAutoPage(){
+  try{
+    const r = await fetch("/settings/autopage/toggle");
+    pushNotification("📄 Auto-Page: " + await r.text());
+  }catch(e){ pushNotification("⚠ Could not reach device"); }
+}
+
+async function restartDevice(){
+  if(!confirm("Restart LumiOS X now? Dashboard will disconnect for a few seconds.")) return;
+  try{
+    await fetch("/restart");
+    pushNotification("⚠ Restart command sent…");
+    setConnection(false);
+  }catch(e){
+    pushNotification("⚠ Could not reach device");
+  }
+}
+
+/* ---------------- WiFi tools ---------------- */
+async function scanWifi(){
+  const list = document.getElementById("wifiScanList");
+  list.innerHTML = '<div class="notif-item"><span>Scanning… (device may pause a few seconds)</span></div>';
+  try{
+    const r = await fetch("/wifi/scan");
+    const nets = await r.json();
+    if(!nets.length){
+      list.innerHTML = '<div class="notif-item"><span>No networks found.</span></div>';
+      return;
+    }
+    list.innerHTML = "";
+    nets.sort((a,b)=>b.rssi-a.rssi).forEach(n=>{
+      const item = document.createElement("div");
+      item.className = "notif-item";
+      item.style.cursor = "pointer";
+      item.innerHTML = "<span>"+(n.secure?"🔒":"🔓")+" "+n.ssid+"</span><time>"+n.rssi+" dBm</time>";
+      item.onclick = ()=>{ document.getElementById("wifiSsid").value = n.ssid; };
+      list.appendChild(item);
+    });
+  }catch(e){
+    list.innerHTML = '<div class="notif-item"><span>⚠ Scan failed — device unreachable</span></div>';
+  }
+}
+
+async function saveWifi(){
+  const ssid = document.getElementById("wifiSsid").value.trim();
+  const pass = document.getElementById("wifiPass").value;
+  if(!ssid){ pushNotification("⚠ Enter an SSID first"); return; }
+  try{
+    const r = await fetch("/wifi/save?ssid="+encodeURIComponent(ssid)+"&password="+encodeURIComponent(pass));
+    pushNotification("💾 " + await r.text());
+  }catch(e){
+    pushNotification("⚠ Could not reach device");
+  }
+}
+
+/* ---------------- Connection status ---------------- */
+function setConnection(online){
+  const dot = document.getElementById("connDot");
+  const text = document.getElementById("connText");
+  dot.classList.toggle("off", !online);
+  text.textContent = online ? "ONLINE" : "OFFLINE — reconnecting…";
+}
+
+/* ---------------- Main fetch loop ---------------- */
+async function fetchInfo(){
+  const t0 = performance.now();
+  let data;
+  try{
+    const res = await fetch("/info");
+    data = await res.json();
+    const ms = Math.round(performance.now()-t0);
+    document.getElementById("latency").textContent = ms+" ms";
+    failCount = 0;
+    setConnection(true);
+  }catch(e){
+    failCount++;
+    if(failCount >= 2) setConnection(false);
+    return;
+  }
+
+  lastData = data;
+  document.getElementById("rawJson").textContent = JSON.stringify(data, null, 2);
+
+  // ---- System gauges ----
+  const cpu = parseFloat(data.cpu)||0;
+  const heapKB = (parseFloat(data.heap)||0)/1024;
+  const temp = parseFloat(data.temperature)||0;
+  const hum = parseFloat(data.humidity)||0;
+
+  document.getElementById("cpuNum").textContent = cpu.toFixed(0);
+  document.getElementById("heapNum").textContent = heapKB.toFixed(0);
+  document.getElementById("tempNum").textContent = temp.toFixed(1);
+  document.getElementById("humNum").textContent = hum.toFixed(1);
+
+  setGauge("gCpu", cpu, 240);
+  setGauge("gHeap", heapKB, 320);
+  setGauge("gTemp", temp, 50);
+  setGauge("gHum", hum, 100);
+
+  // ---- Network ----
+  document.getElementById("ssid").textContent = data.ssid || "--";
+  document.getElementById("ip").textContent = data.ip || "--";
+  document.getElementById("mac").textContent = data.mac || "--";
+  document.getElementById("rssi").textContent = data.rssi + " dBm";
+  updateSignal(parseFloat(data.rssi)||-100);
+
+  const rssiEl = document.getElementById("rssi");
+  rssiEl.className = "value " + (data.rssi > -65 ? "good" : (data.rssi > -80 ? "warn" : "bad"));
+
+  // ---- Sensors ----
+  document.getElementById("temperature").textContent = temp.toFixed(1)+" °C";
+  document.getElementById("humidity").textContent = hum.toFixed(1)+" %";
+
+  const distEl = document.getElementById("distance");
+  const distOnline = data.distanceOnline === true || data.distanceOnline === "true";
+  const distWarn = data.distanceWarning === true || data.distanceWarning === "true";
+  distEl.textContent = distOnline ? (parseFloat(data.distance)||0).toFixed(1)+" cm" : "No object";
+  distEl.className = "value " + (distWarn ? "bad" : (distOnline ? "good" : ""));
+
+  const smokeEl = document.getElementById("smoke");
+  const smokeWarn = data.smokeWarning === true || data.smokeWarning === "true";
+  const smokeDanger = data.smokeDanger === true || data.smokeDanger === "true";
+  smokeEl.textContent = (data.smoke ?? "--")+" %";
+  smokeEl.className = "value " + (smokeDanger ? "bad" : (smokeWarn ? "warn" : "good"));
+
+  const statusEl = document.getElementById("sensorStatus");
+  if(smokeDanger){ statusEl.textContent = "🔥 DANGER — Smoke Level High"; statusEl.className = "value bad"; }
+  else if(smokeWarn || distWarn){ statusEl.textContent = "⚠ Warning — Check Sensors"; statusEl.className = "value warn"; }
+  else { statusEl.textContent = "✅ All Normal"; statusEl.className = "value good"; }
+
+  // ---- System ----
+  document.getElementById("flash").textContent = data.flash+" MB";
+  document.getElementById("uptime").textContent = fmtUptime(data.uptime);
+  document.getElementById("uptimeText").textContent = "Uptime: "+fmtUptime(data.uptime);
+  document.getElementById("project").textContent = data.project || "LumiOS X";
+  document.getElementById("version").textContent = data.version || "1.0.0";
+
+  // ---- Developer panel extras ----
+  const bootChip = document.getElementById("bootChip");
+  if(bootChip) bootChip.textContent = "Boots: " + (data.bootCount ?? "--");
+  const resetChip = document.getElementById("resetChip");
+  if(resetChip) resetChip.textContent = "Last Reset: " + (data.resetReason ?? "--");
+  const authChip = document.getElementById("authChip");
+  if(authChip){
+    const authOn = data.authEnabled === "ON";
+    authChip.textContent = "Auth: " + (data.authEnabled ?? "--");
+    authChip.className = "chip " + (authOn ? "green" : "amber");
+  }
+
+  // ---- OLED mirror ----
+  const oledBadge = document.getElementById("oledPageBadge");
+  if(oledBadge) oledBadge.textContent = (data.oledPage || "HOME").toUpperCase();
+  drawOled(data);
+
+  // ---- LEDs ----
+  for(let i=1;i<=5;i++) updateLed(i, data["led"+i], data["ledOverride"+i]);
+
+  const ledAutoChip = document.getElementById("ledAutoChip");
+  if(ledAutoChip){
+    const isAuto = (data.ledAutoMode || "").toLowerCase() === "auto";
+    ledAutoChip.textContent = "Mode: " + (data.ledAutoMode || "--");
+    ledAutoChip.className = "led-mode-chip " + (isAuto ? "auto" : "manual");
+  }
+
+  // ---- Developer ----
+  document.getElementById("devModeChip").textContent = "Developer Mode: "+(data.developerMode ?? "--");
+  document.getElementById("themeChip").textContent = "Theme: "+(data.theme ?? "--");
+
+  // ---- Notification ----
+  if(data.notification) pushNotification(data.notification, data.notifPriority);
+
+  // ---- History + chart ----
+  tempHist.push(temp); if(tempHist.length>HISTORY_N) tempHist.shift();
+  humHist.push(hum);   if(humHist.length>HISTORY_N)  humHist.shift();
+  drawChart();
+}
+
+/* ================================================================
+   Real OLED Mirror — SH1106 128x64 pixel-accurate canvas replica
+   Mirrors drawHomePage()/drawWiFiPage()/drawSystemPage()/etc from
+   display.cpp line-for-line, using the same live data from /info.
+   ================================================================ */
+let devSubPage = 0;
+let settingsSubPage = 0;
+setInterval(()=>{ devSubPage = (devSubPage+1)%4; settingsSubPage = (settingsSubPage+1)%2; }, 5000);
+
+function oledCtx(){
+  const canvas = document.getElementById("oledCanvas");
+  if(!canvas) return null;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,128,64);
+  ctx.fillStyle = "#00e5ff";
+  ctx.strokeStyle = "#00e5ff";
+  return ctx;
+}
+
+function oTitle(ctx, text, x){
+  ctx.font = "bold 11px 'Courier New',monospace";
+  ctx.fillText(text, x, 12);
+  ctx.beginPath();
+  ctx.moveTo(0,16); ctx.lineTo(128,16); ctx.lineWidth=1; ctx.stroke();
+  ctx.font = "10px 'Courier New',monospace";
+}
+
+function oLine(ctx, text, x, y){
+  ctx.fillText(text, x, y);
+}
+
+function drawOled(data){
+  const ctx = oledCtx();
+  if(!ctx) return;
+
+  const page = (data.oledPage || "HOME").toUpperCase();
+  const heapKB = Math.round((parseFloat(data.heap)||0)/1024);
+  const uptimeSec = parseInt(data.uptime)||0;
+
+  switch(page){
+    case "HOME": {
+      oTitle(ctx, "LumiOS X", 20);
+      oLine(ctx, "SYS :  ONLINE", 0, 30);
+      oLine(ctx, "WiFi: " + ((data.ip && data.ip !== "0.0.0.0") ? "OK" : "---"), 0, 42);
+      oLine(ctx, "Heap:" + heapKB + "KB", 0, 54);
+      oLine(ctx, "Up:" + uptimeSec + "s", 0, 62);
+      break;
+    }
+    case "WIFI": {
+      oTitle(ctx, "WIFI", 35);
+      if(data.ip && data.ip !== "0.0.0.0"){
+        oLine(ctx, "SSID : " + (data.ssid||"--"), 0, 30);
+        oLine(ctx, "IP   : " + (data.ip||"--"), 0, 42);
+        oLine(ctx, "RSSI : " + (data.rssi ?? "--") + " dBm", 0, 54);
+        oLine(ctx, " ONLINE", 0, 62);
+      } else {
+        oLine(ctx, "WiFi Not Connected", 0, 35);
+        oLine(ctx, "Waiting...", 0, 50);
+      }
+      break;
+    }
+    case "SYSTEM": {
+      oTitle(ctx, "SYSTEM", 20);
+      oLine(ctx, "Heap : " + heapKB + " KB", 0, 30);
+      oLine(ctx, "Flash: " + (data.flash ?? "--") + " MB", 0, 40);
+      oLine(ctx, "CPU  : " + (data.cpu ?? "--") + " MHz", 0, 50);
+      oLine(ctx, "UP   : " + fmtUptime(data.uptime), 0, 60);
+      break;
+    }
+    case "SENSORS": {
+      oTitle(ctx, "Weather", 25);
+      oLine(ctx, "Temp : " + (parseFloat(data.temperature)||0).toFixed(1) + " C", 0, 34);
+      oLine(ctx, "Hum  : " + (parseFloat(data.humidity)||0).toFixed(1) + " %", 0, 46);
+      oLine(ctx, "Status : Online", 0, 58);
+      break;
+    }
+    case "DEVELOPER": {
+      oTitle(ctx, "Developer", 8);
+      switch(devSubPage){
+        case 0:
+          oLine(ctx, data.devName || "Sudev Kuchhal", 0, 35);
+          oLine(ctx, data.devRole || "Embedded Systems", 0, 50);
+          break;
+        case 1:
+          oLine(ctx, "GitHub", 0, 30);
+          oLine(ctx, "Repos : " + (data.devRepos ?? "--"), 0, 45);
+          oLine(ctx, "Stars : " + (data.devStars ?? "--"), 0, 60);
+          break;
+        case 2:
+          oLine(ctx, "LinkedIn", 0, 35);
+          oLine(ctx, "linkedin.com/in/", 0, 50);
+          oLine(ctx, (data.devGitHub || "sudevkuchhal"), 0, 62);
+          break;
+        case 3:
+          oLine(ctx, "Status", 0, 30);
+          oLine(ctx, data.devStatus || "Building LumiOS X", 0, 50);
+          break;
+      }
+      break;
+    }
+    case "NOTIFICATIONS": {
+      oTitle(ctx, "NOTIFICATIONS", 8);
+      ctx.font = "9px 'Courier New',monospace";
+      const msg = data.notification || "No Alerts";
+      // wrap long messages across two lines like a real 128px-wide screen would
+      const maxChars = 24;
+      const line1 = msg.slice(0, maxChars);
+      const line2 = msg.slice(maxChars, maxChars*2);
+      oLine(ctx, line1, 0, 40);
+      if(line2) oLine(ctx, line2, 0, 52);
+      break;
+    }
+    case "SETTINGS": {
+      oTitle(ctx, "SETTINGS", 25);
+      if(settingsSubPage === 0){
+        oLine(ctx, "Developer : " + (data.developerMode ?? "--"), 0, 30);
+        oLine(ctx, "Auto Page : " + (data.autoPage ?? "--"), 0, 40);
+        oLine(ctx, "Animation : " + (data.animation ?? "--"), 0, 50);
+        oLine(ctx, "OTA : " + (data.ota ?? "--"), 0, 60);
+      } else {
+        oLine(ctx, "Brightness : " + (data.brightness ?? "--"), 0, 30);
+        oLine(ctx, "Theme : " + (data.theme ?? "--"), 0, 40);
+        oLine(ctx, "Language : " + (data.language ?? "--"), 0, 50);
+        oLine(ctx, "Auth : " + (data.authEnabled ?? "--"), 0, 60);
+      }
+      break;
+    }
+    default:
+      oTitle(ctx, "LumiOS X", 20);
+      oLine(ctx, "Unknown page: " + page, 0, 35);
+  }
+}
+
+/* ---------------- Notification history (Stage E) ---------------- */
+async function loadNotificationHistory(){
+  try{
+    const r = await fetch("/notifications/history");
+    const hist = await r.json();
+    if(!hist.length) return;
+    const list = document.getElementById("notifList");
+    list.innerHTML = "";
+    hist.forEach(h=>{
+      const item = document.createElement("div");
+      const prio = (h.priority || "info").toLowerCase();
+      item.className = "notif-item" + (prio !== "info" ? " "+prio : "");
+      const badge = prio === "critical" ? "🔴" : (prio === "warning" ? "🟠" : "");
+      item.innerHTML = "<span>"+(badge?"<span class='prio-badge'>"+badge+"</span>":"")+h.msg+"</span><time>@" + fmtUptime(h.uptime) + "</time>";
+      list.appendChild(item);
+    });
+  }catch(e){ /* device unreachable — leave placeholder */ }
+}
+
+function clearNotifications(){
+  fetch("/notifications/clear").catch(()=>{});
+  const list = document.getElementById("notifList");
+  list.innerHTML = '<div class="notif-item"><span>Cleared. Waiting for new alerts…</span></div>';
+}
+
+/* ---------------- Dashboard auth toggle (Stage H) ---------------- */
+async function toggleAuth(){
+  try{
+    const r = await fetch("/settings/auth/toggle");
+    pushNotification("🔐 Dashboard Auth: " + await r.text());
+  }catch(e){ pushNotification("⚠ Could not reach device"); }
+  fetchInfo();
+}
+
+loadNotificationHistory();
+fetchInfo();
+setInterval(fetchInfo, POLL_MS);
+
+// ---- Phase 6: Plugin Sensors ----
+// Polls /api/plugins and rebuilds the card's rows from whatever JSON
+// comes back. This is the "automatic dashboard card" piece of the
+// plugin architecture: a new REGISTER_SENSOR() sensor needs zero
+// changes here to show up, because the row markup is built purely
+// from the field names each sensor happens to report.
+const PLUGIN_POLL_MS = 3000; // less urgent than core telemetry, lighter poll
+
+async function fetchPlugins(){
+  let sensors;
+  try{
+    const res = await fetch("/api/plugins");
+    sensors = await res.json();
+  }catch(e){
+    return; // leave last-known content on screen rather than blanking it
+  }
+
+  const list = document.getElementById("pluginSensorsList");
+  if(!Array.isArray(sensors) || sensors.length === 0){
+    list.innerHTML = '<div class="row"><div class="label" style="opacity:.6">No plugin sensors registered yet</div></div>';
+    return;
+  }
+
+  list.innerHTML = sensors.map(s => {
+    const badge = s.alert === "critical" ? "🔴" : (s.alert === "warning" ? "🟠" : "");
+    const valueClass = s.alert === "critical" || s.alert === "warning" ? "value warn" : "value";
+    const state = s.enabled ? "" : ' <span style="opacity:.5">(disabled)</span>';
+
+    // Render every extra field the sensor reported (getJsonFields())
+    // as its own row, skipping the fields we already show explicitly.
+    const known = new Set(["id","name","enabled","alert"]);
+    const extraRows = Object.keys(s)
+      .filter(k => !known.has(k))
+      .map(k => `<div class="row"><div class="label">${k}</div><div class="${valueClass}">${s[k]}</div></div>`)
+      .join("");
+
+    return `<div class="row"><div class="label">${badge} ${s.name}${state}</div></div>${extraRows}`;
+  }).join("");
+}
+
+fetchPlugins();
+setInterval(fetchPlugins, PLUGIN_POLL_MS);
+
+// ================================================================
+// v1.0 — Version Manager / Health Monitor / OTA System
+// ================================================================
+
+const V1_POLL_MS = 4000; // lighter than core telemetry — these change slowly
+
+async function fetchVersion(){
+  try{
+    const r = await fetch("/api/version");
+    const v = await r.json();
+    document.getElementById("verFirmware").textContent  = v.firmware || "--";
+    document.getElementById("verBuildDate").textContent = v.buildDate || "--";
+    document.getElementById("verBuildTime").textContent = v.buildTime || "--";
+    document.getElementById("verChip").textContent      = v.chip || "--";
+    document.getElementById("verFlashSize").textContent = v.flashSize || "--";
+    document.getElementById("verFreeFlash").textContent = v.freeFlash || "--";
+    document.getElementById("verLayers").textContent    = `${v.apiVersion} / ${v.dashboardVersion} / ${v.oledVersion}`;
+  }catch(e){ /* device unreachable — leave placeholder */ }
+}
+
+function setBar(fillId, pct, warnAt, critAt){
+  const fill = document.getElementById(fillId);
+  fill.style.width = Math.min(100, Math.max(0, pct)) + "%";
+  fill.classList.remove("warn","bad");
+  if(pct >= critAt) fill.classList.add("bad");
+  else if(pct >= warnAt) fill.classList.add("warn");
+}
+
+function healthValueClass(ok){ return ok ? "value good" : "value bad"; }
+
+async function fetchHealth(){
+  try{
+    const r = await fetch("/api/health");
+    const h = await r.json();
+
+    document.getElementById("healthHeapPct").textContent = h.heapUsedPercent + "%";
+    setBar("healthHeapBar", h.heapUsedPercent, 70, 90);
+
+    document.getElementById("healthFsPct").textContent = h.fsUsedPercent + "%";
+    setBar("healthFsBar", h.fsUsedPercent, 80, 95);
+
+    document.getElementById("healthCpuPct").textContent = h.cpuLoadPercent + "%";
+    setBar("healthCpuBar", h.cpuLoadPercent, 70, 90);
+
+    const wifiEl = document.getElementById("healthWifi");
+    wifiEl.textContent = h.wifiStatus + (h.rssi ? ` (${h.rssi} dBm)` : "");
+    wifiEl.className = healthValueClass(h.wifiStatus === "Connected");
+
+    const mqttEl = document.getElementById("healthMqtt");
+    mqttEl.textContent = h.mqttStatus;
+    mqttEl.className = healthValueClass(h.mqttStatus === "Connected");
+
+    const sensorEl = document.getElementById("healthSensors");
+    sensorEl.textContent = h.sensorStatus;
+    sensorEl.className = healthValueClass(h.sensorStatus === "OK");
+
+    document.getElementById("healthBoots").textContent = `${h.bootCount} / ${h.restartCount}`;
+    document.getElementById("healthUptime").textContent = h.uptime;
+  }catch(e){ /* device unreachable — leave placeholder */ }
+}
+
+/* ---------------- OTA Firmware Update ---------------- */
+
+let otaSelectedFile = null;
+
+const otaFileInput = document.getElementById("otaFile");
+const otaDropZone   = document.getElementById("otaDrop");
+
+if (otaFileInput){
+  otaFileInput.addEventListener("change", (e) => {
+    otaSelectedFile = e.target.files[0] || null;
+    document.getElementById("otaFilename").textContent =
+      otaSelectedFile ? `Selected: ${otaSelectedFile.name} (${(otaSelectedFile.size/1024).toFixed(1)} KB)` : "No file selected";
+  });
+}
+
+if (otaDropZone){
+  ["dragenter","dragover"].forEach(evt =>
+    otaDropZone.addEventListener(evt, (e) => { e.preventDefault(); otaDropZone.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(evt =>
+    otaDropZone.addEventListener(evt, (e) => { e.preventDefault(); otaDropZone.classList.remove("drag"); }));
+  otaDropZone.addEventListener("drop", (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file){
+      otaSelectedFile = file;
+      document.getElementById("otaFilename").textContent = `Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    }
+  });
+}
+
+function startOtaUpload(){
+  if (!otaSelectedFile){
+    pushNotification("⚠ Choose a .bin file first");
+    return;
+  }
+
+  const wrap = document.getElementById("otaProgressWrap");
+  const fill = document.getElementById("otaProgressFill");
+  const status = document.getElementById("otaStatusText");
+  const btn = document.getElementById("otaUploadBtn");
+
+  wrap.style.display = "block";
+  fill.style.width = "0%";
+  status.className = "ota-status-text";
+  status.textContent = "Starting upload...";
+  btn.disabled = true;
+
+  const xhr = new XMLHttpRequest();
+  const fd = new FormData();
+  fd.append("firmware", otaSelectedFile);
+
+  xhr.upload.addEventListener("progress", (ev) => {
+    if (ev.lengthComputable){
+      const pct = Math.round(ev.loaded / ev.total * 100);
+      fill.style.width = pct + "%";
+      status.textContent = `Uploading... ${pct}%`;
+    }
+  });
+
+  xhr.onload = () => {
+    btn.disabled = false;
+    const ok = xhr.status === 200 && /OK/i.test(xhr.responseText);
+    status.className = "ota-status-text " + (ok ? "ok" : "bad");
+    status.textContent = xhr.responseText || (ok ? "Update OK. Rebooting..." : "Update failed.");
+    if (ok) fill.style.width = "100%";
+    fetchOtaStatus();
+  };
+
+  xhr.onerror = () => {
+    btn.disabled = false;
+    status.className = "ota-status-text bad";
+    status.textContent = "Upload failed (connection lost).";
+  };
+
+  xhr.open("POST", "/update");
+  xhr.send(fd);
+}
+
+async function fetchOtaStatus(){
+  try{
+    const r = await fetch("/api/ota/status");
+    const s = await r.json();
+
+    document.getElementById("otaEnabledVal").textContent = s.otaEnabled ? "ON" : "OFF";
+    document.getElementById("otaLastResult").textContent =
+      s.lastResult === "none" ? "No OTA yet" : (s.lastResult === "success" ? "✅ Success" : "❌ Failed");
+
+    if (s.active){
+      const wrap = document.getElementById("otaProgressWrap");
+      const fill = document.getElementById("otaProgressFill");
+      const status = document.getElementById("otaStatusText");
+      wrap.style.display = "block";
+      fill.style.width = s.progress + "%";
+      status.textContent = s.status + (s.progress ? ` (${s.progress}%)` : "");
+    }
+  }catch(e){ /* device unreachable */ }
+}
+
+fetchVersion();
+fetchHealth();
+fetchOtaStatus();
+setInterval(fetchVersion, V1_POLL_MS * 3); // build/chip info never changes at runtime
+setInterval(fetchHealth, V1_POLL_MS);
+setInterval(fetchOtaStatus, V1_POLL_MS / 2);
+</script>
+
+</body>
+</html>
