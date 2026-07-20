@@ -1,9 +1,9 @@
 # LumiOS X — v1.0 Stable
-![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
-![Framework](https://img.shields.io/badge/Framework-Arduino-green)
-![IDE](https://img.shields.io/badge/IDE-PlatformIO-orange)
-![License](https://img.shields.io/badge/License-MIT-yellow)
-![Version](https://img.shields.io/badge/Version-v1.0-red)
+![ESP32](https://img.shields.io/badge/ESP32-IoT-blue?style=for-the-badge&logo=espressif)
+![Arduino](https://img.shields.io/badge/Arduino-Framework-00979D?style=for-the-badge&logo=arduino)
+![PlatformIO](https://img.shields.io/badge/PlatformIO-IDE-F5822A?style=for-the-badge&logo=platformio)
+![MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-v1.0-red?style=for-the-badge)
 
 
 **An autonomous ESP32 IoT control hub** — sensors, LEDs, an SH1106 OLED,
