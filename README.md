@@ -6,7 +6,6 @@
 ![MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-v1.0-red?style=for-the-badge)
 
-
 **An autonomous ESP32 IoT control hub** — sensors, LEDs, an SH1106 OLED,
 a live web dashboard, remote cloud access over MQTT, OTA firmware
 updates, and a plugin architecture for adding new sensors without
